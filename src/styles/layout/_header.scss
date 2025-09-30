@@ -1,0 +1,249 @@
+// 头部布局样式
+.header {
+  position: sticky;
+  top: 0;
+  z-index: $z-index-sticky;
+  background-color: rgba($white, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid $gray-200;
+  @include transition(all);
+  
+  &__container {
+    @include container;
+    @include flex-center-vertical;
+    justify-content: space-between;
+    height: 4rem;
+    
+    @include respond-to-max(tablet) {
+      height: 3.5rem;
+    }
+  }
+  
+  // Logo 区域
+  &__logo {
+    @include flex-center-vertical;
+    gap: $spacing-sm;
+    text-decoration: none;
+    color: $gray-900;
+    font-weight: $font-weight-bold;
+    font-size: $font-size-lg;
+    
+    &-icon {
+      width: 2rem;
+      height: 2rem;
+      color: $primary-color;
+    }
+    
+    &:hover {
+      color: $primary-color;
+    }
+  }
+  
+  // 导航菜单
+  &__nav {
+    @include flex-center-vertical;
+    gap: $spacing-lg;
+    
+    @include respond-to-max(tablet) {
+      display: none;
+    }
+  }
+  
+  &__nav-link {
+    color: $gray-600;
+    text-decoration: none;
+    font-weight: $font-weight-medium;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $border-radius-md;
+    @include transition(all);
+    
+    &:hover {
+      color: $primary-color;
+      background-color: rgba($primary-color, 0.1);
+    }
+    
+    &--active {
+      color: $primary-color;
+      background-color: rgba($primary-color, 0.1);
+    }
+  }
+  
+  // 用户操作区域
+  &__actions {
+    @include flex-center-vertical;
+    gap: $spacing-md;
+  }
+  
+  // 用户头像
+  &__avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: $border-radius-full;
+    background-color: $primary-color;
+    color: $white;
+    @include flex-center;
+    font-weight: $font-weight-semibold;
+    cursor: pointer;
+    @include transition(all);
+    
+    &:hover {
+      transform: scale(1.05);
+      @include card-shadow(md);
+    }
+    
+    img {
+      width: 100%;
+      height: 100%;
+      border-radius: $border-radius-full;
+      object-fit: cover;
+    }
+  }
+  
+  // 移动端菜单按钮
+  &__menu-button {
+    display: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    @include flex-center;
+    border-radius: $border-radius-md;
+    color: $gray-600;
+    @include transition(all);
+    
+    &:hover {
+      background-color: $gray-100;
+      color: $gray-900;
+    }
+    
+    @include respond-to-max(tablet) {
+      display: flex;
+    }
+  }
+  
+  // 移动端导航菜单
+  &__mobile-nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: $white;
+    border-bottom: 1px solid $gray-200;
+    @include card-shadow(lg);
+    
+    &--open {
+      display: block;
+      animation: slideDown 0.2s ease-out;
+    }
+    
+    @include respond-to-max(tablet) {
+      display: none;
+      
+      &--open {
+        display: block;
+      }
+    }
+  }
+  
+  &__mobile-nav-list {
+    padding: $spacing-lg 0;
+  }
+  
+  &__mobile-nav-item {
+    display: block;
+    padding: $spacing-md $spacing-xl;
+    color: $gray-700;
+    text-decoration: none;
+    font-weight: $font-weight-medium;
+    @include transition(all);
+    
+    &:hover {
+      background-color: $gray-50;
+      color: $primary-color;
+    }
+    
+    &--active {
+      background-color: rgba($primary-color, 0.1);
+      color: $primary-color;
+    }
+  }
+  
+  // 通知徽章
+  &__notification-badge {
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 8px;
+      height: 8px;
+      background-color: $danger-color;
+      border-radius: $border-radius-full;
+      border: 2px solid $white;
+    }
+  }
+  
+  // 搜索框
+  &__search {
+    position: relative;
+    max-width: 300px;
+    
+    @include respond-to-max(desktop) {
+      max-width: 200px;
+    }
+    
+    @include respond-to-max(tablet) {
+      display: none;
+    }
+    
+    input {
+      width: 100%;
+      padding: $spacing-sm $spacing-lg $spacing-sm $spacing-3xl;
+      border: 1px solid $gray-300;
+      border-radius: $border-radius-full;
+      background-color: $gray-50;
+      font-size: $font-size-sm;
+      @include transition(all);
+      
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+        background-color: $white;
+        @include card-shadow(sm);
+      }
+      
+      &::placeholder {
+        color: $gray-400;
+      }
+    }
+    
+    &-icon {
+      position: absolute;
+      left: $spacing-lg;
+      top: 50%;
+      transform: translateY(-50%);
+      color: $gray-400;
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+}
+
+// 动画
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 滚动时的头部样式
+.header--scrolled {
+  background-color: rgba($white, 0.98);
+  @include card-shadow(sm);
+}

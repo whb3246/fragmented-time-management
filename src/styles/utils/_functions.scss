@@ -1,0 +1,160 @@
+// 工具函数定义
+
+// 获取颜色函数
+@function get-color($color-name) {
+  $colors: (
+    'primary': $primary-color,
+    'primary-light': $primary-light,
+    'primary-dark': $primary-dark,
+    'secondary': $secondary-color,
+    'secondary-light': $secondary-light,
+    'secondary-dark': $secondary-dark,
+    'accent': $accent-color,
+    'accent-light': $accent-light,
+    'accent-dark': $accent-dark,
+    'danger': $danger-color,
+    'warning': $warning-color,
+    'success': $success-color,
+    'info': $info-color,
+    'white': $white,
+    'gray-50': $gray-50,
+    'gray-100': $gray-100,
+    'gray-200': $gray-200,
+    'gray-300': $gray-300,
+    'gray-400': $gray-400,
+    'gray-500': $gray-500,
+    'gray-600': $gray-600,
+    'gray-700': $gray-700,
+    'gray-800': $gray-800,
+    'gray-900': $gray-900,
+    'black': $black
+  );
+  
+  @if map-has-key($colors, $color-name) {
+    @return map-get($colors, $color-name);
+  } @else {
+    @warn "Unknown color: #{$color-name}.";
+    @return null;
+  }
+}
+
+// 获取间距函数
+@function get-spacing($spacing-name) {
+  $spacings: (
+    'xs': $spacing-xs,
+    'sm': $spacing-sm,
+    'md': $spacing-md,
+    'lg': $spacing-lg,
+    'xl': $spacing-xl,
+    '2xl': $spacing-2xl,
+    '3xl': $spacing-3xl,
+    '4xl': $spacing-4xl
+  );
+  
+  @if map-has-key($spacings, $spacing-name) {
+    @return map-get($spacings, $spacing-name);
+  } @else {
+    @warn "Unknown spacing: #{$spacing-name}.";
+    @return null;
+  }
+}
+
+// 获取字体大小函数
+@function get-font-size($size-name) {
+  $font-sizes: (
+    'xs': $font-size-xs,
+    'sm': $font-size-sm,
+    'base': $font-size-base,
+    'lg': $font-size-lg,
+    'xl': $font-size-xl,
+    '2xl': $font-size-2xl,
+    '3xl': $font-size-3xl,
+    '4xl': $font-size-4xl
+  );
+  
+  @if map-has-key($font-sizes, $size-name) {
+    @return map-get($font-sizes, $size-name);
+  } @else {
+    @warn "Unknown font size: #{$size-name}.";
+    @return null;
+  }
+}
+
+// 获取圆角函数
+@function get-border-radius($radius-name) {
+  $border-radiuses: (
+    'sm': $border-radius-sm,
+    'md': $border-radius-md,
+    'lg': $border-radius-lg,
+    'xl': $border-radius-xl,
+    '2xl': $border-radius-2xl,
+    'full': $border-radius-full
+  );
+  
+  @if map-has-key($border-radiuses, $radius-name) {
+    @return map-get($border-radiuses, $radius-name);
+  } @else {
+    @warn "Unknown border radius: #{$radius-name}.";
+    @return null;
+  }
+}
+
+// 计算对比度函数
+@function contrast-ratio($color1, $color2) {
+  $l1: luminance($color1);
+  $l2: luminance($color2);
+  
+  @if $l1 > $l2 {
+    @return ($l1 + 0.05) / ($l2 + 0.05);
+  } @else {
+    @return ($l2 + 0.05) / ($l1 + 0.05);
+  }
+}
+
+// 计算亮度函数
+@function luminance($color) {
+  $red: red($color) / 255;
+  $green: green($color) / 255;
+  $blue: blue($color) / 255;
+  
+  $red: if($red <= 0.03928, $red / 12.92, pow(($red + 0.055) / 1.055, 2.4));
+  $green: if($green <= 0.03928, $green / 12.92, pow(($green + 0.055) / 1.055, 2.4));
+  $blue: if($blue <= 0.03928, $blue / 12.92, pow(($blue + 0.055) / 1.055, 2.4));
+  
+  @return 0.2126 * $red + 0.7152 * $green + 0.0722 * $blue;
+}
+
+// 获取可读文本颜色函数
+@function readable-color($background-color, $light-color: $white, $dark-color: $gray-900) {
+  $contrast-light: contrast-ratio($background-color, $light-color);
+  $contrast-dark: contrast-ratio($background-color, $dark-color);
+  
+  @if $contrast-light > $contrast-dark {
+    @return $light-color;
+  } @else {
+    @return $dark-color;
+  }
+}
+
+// 颜色透明度函数
+@function alpha($color, $opacity) {
+  @return rgba($color, $opacity);
+}
+
+// 单位转换函数
+@function strip-unit($number) {
+  @if type-of($number) == 'number' and not unitless($number) {
+    @return $number / ($number * 0 + 1);
+  }
+  @return $number;
+}
+
+// rem 转换函数
+@function rem($pixels, $base-font-size: 16px) {
+  @return #{strip-unit($pixels) / strip-unit($base-font-size)}rem;
+}
+
+// em 转换函数
+@function em($pixels, $context: 16px) {
+  @return #{strip-unit($pixels) / strip-unit($context)}em;
+}

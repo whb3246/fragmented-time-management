@@ -1,0 +1,25 @@
+// 主样式文件 - 导入所有样式模块
+
+// 基础样式
+@import 'base/variables';
+@import 'base/reset';
+@import 'base/typography';
+
+// 工具函数和混合器
+@import 'utils/functions';
+@import 'utils/mixins';
+
+// 布局样式
+@import 'layout/header';
+@import 'layout/grid';
+
+// 组件样式
+@import 'components/button';
+@import 'components/card';
+@import 'components/timer';
+
+// 页面样式（将在后续步骤中创建）
+// @import 'pages/home';
+// @import 'pages/timer';
+// @import 'pages/history';
+// @import 'pages/settings';

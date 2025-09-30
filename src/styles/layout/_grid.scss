@@ -1,0 +1,241 @@
+// 网格系统样式
+.container {
+  @include container;
+}
+
+// 网格容器
+.grid {
+  display: grid;
+  gap: $spacing-lg;
+  
+  // 网格列数
+  &--1 { grid-template-columns: 1fr; }
+  &--2 { grid-template-columns: repeat(2, 1fr); }
+  &--3 { grid-template-columns: repeat(3, 1fr); }
+  &--4 { grid-template-columns: repeat(4, 1fr); }
+  &--5 { grid-template-columns: repeat(5, 1fr); }
+  &--6 { grid-template-columns: repeat(6, 1fr); }
+  
+  // 响应式网格
+  &--responsive-2 {
+    grid-template-columns: repeat(2, 1fr);
+    
+    @include respond-to-max(tablet) {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  &--responsive-3 {
+    grid-template-columns: repeat(3, 1fr);
+    
+    @include respond-to-max(desktop) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    @include respond-to-max(tablet) {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  &--responsive-4 {
+    grid-template-columns: repeat(4, 1fr);
+    
+    @include respond-to-max(large) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    @include respond-to-max(desktop) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    @include respond-to-max(tablet) {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  // 网格间距
+  &--gap-sm { gap: $spacing-sm; }
+  &--gap-md { gap: $spacing-md; }
+  &--gap-lg { gap: $spacing-lg; }
+  &--gap-xl { gap: $spacing-xl; }
+  &--gap-2xl { gap: $spacing-2xl; }
+}
+
+// Flexbox 布局
+.flex {
+  display: flex;
+  
+  // 方向
+  &--row { flex-direction: row; }
+  &--col { flex-direction: column; }
+  &--row-reverse { flex-direction: row-reverse; }
+  &--col-reverse { flex-direction: column-reverse; }
+  
+  // 主轴对齐
+  &--justify-start { justify-content: flex-start; }
+  &--justify-center { justify-content: center; }
+  &--justify-end { justify-content: flex-end; }
+  &--justify-between { justify-content: space-between; }
+  &--justify-around { justify-content: space-around; }
+  &--justify-evenly { justify-content: space-evenly; }
+  
+  // 交叉轴对齐
+  &--items-start { align-items: flex-start; }
+  &--items-center { align-items: center; }
+  &--items-end { align-items: flex-end; }
+  &--items-stretch { align-items: stretch; }
+  &--items-baseline { align-items: baseline; }
+  
+  // 换行
+  &--wrap { flex-wrap: wrap; }
+  &--nowrap { flex-wrap: nowrap; }
+  &--wrap-reverse { flex-wrap: wrap-reverse; }
+  
+  // 间距
+  &--gap-sm { gap: $spacing-sm; }
+  &--gap-md { gap: $spacing-md; }
+  &--gap-lg { gap: $spacing-lg; }
+  &--gap-xl { gap: $spacing-xl; }
+  &--gap-2xl { gap: $spacing-2xl; }
+}
+
+// 页面布局
+.page-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  
+  &__header {
+    flex-shrink: 0;
+  }
+  
+  &__main {
+    flex: 1;
+    padding: $spacing-xl 0;
+    
+    @include respond-to-max(tablet) {
+      padding: $spacing-lg 0;
+    }
+  }
+  
+  &__footer {
+    flex-shrink: 0;
+    margin-top: auto;
+  }
+}
+
+// 侧边栏布局
+.sidebar-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  min-height: 100vh;
+  
+  @include respond-to-max(desktop) {
+    grid-template-columns: 200px 1fr;
+  }
+  
+  @include respond-to-max(tablet) {
+    grid-template-columns: 1fr;
+  }
+  
+  &__sidebar {
+    background-color: $gray-50;
+    border-right: 1px solid $gray-200;
+    
+    @include respond-to-max(tablet) {
+      display: none;
+    }
+  }
+  
+  &__content {
+    overflow: hidden;
+  }
+}
+
+// 居中布局
+.center-layout {
+  @include flex-center;
+  min-height: 100vh;
+  padding: $spacing-xl;
+  
+  &__content {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+// 卡片布局
+.card-layout {
+  @include container;
+  padding-top: $spacing-2xl;
+  padding-bottom: $spacing-2xl;
+  
+  &__grid {
+    @extend .grid;
+    @extend .grid--responsive-3;
+  }
+}
+
+// 工具类
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.min-h-screen { min-height: 100vh; }
+
+// 间距工具类
+.m-0 { margin: 0; }
+.m-auto { margin: auto; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.my-auto { margin-top: auto; margin-bottom: auto; }
+
+.p-0 { padding: 0; }
+
+// 显示/隐藏工具类
+.hidden { display: none; }
+.block { display: block; }
+.inline { display: inline; }
+.inline-block { display: inline-block; }
+.flex { display: flex; }
+.grid { display: grid; }
+
+// 响应式显示/隐藏
+.hidden-mobile {
+  @include respond-to-max(tablet) {
+    display: none !important;
+  }
+}
+
+.hidden-tablet {
+  @include respond-to-max(desktop) {
+    display: none !important;
+  }
+}
+
+.hidden-desktop {
+  @include respond-to(desktop) {
+    display: none !important;
+  }
+}
+
+.show-mobile {
+  display: none !important;
+  
+  @include respond-to-max(tablet) {
+    display: block !important;
+  }
+}
+
+.show-tablet {
+  display: none !important;
+  
+  @include respond-to-max(desktop) {
+    display: block !important;
+  }
+}
+
+.show-desktop {
+  display: none !important;
+  
+  @include respond-to(desktop) {
+    display: block !important;
+  }
+}
