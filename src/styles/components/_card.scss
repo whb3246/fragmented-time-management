@@ -1,4 +1,7 @@
 // 卡片组件样式
+@use '../base/variables' as *;
+@use '../utils/mixins' as *;
+
 .card {
   background-color: $white;
   border-radius: $border-radius-xl;

@@ -1,4 +1,7 @@
 // 网格系统样式
+@use '../base/variables' as *;
+@use '../utils/mixins' as *;
+
 .container {
   @include container;
 }

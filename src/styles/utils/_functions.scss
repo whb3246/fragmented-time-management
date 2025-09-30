@@ -1,4 +1,6 @@
 // 工具函数定义
+@use 'sass:map';
+@use '../base/variables' as *;
 
 // 获取颜色函数
 @function get-color($color-name) {
@@ -30,8 +32,8 @@
     'black': $black
   );
   
-  @if map-has-key($colors, $color-name) {
-    @return map-get($colors, $color-name);
+  @if map.has-key($colors, $color-name) {
+    @return map.get($colors, $color-name);
   } @else {
     @warn "Unknown color: #{$color-name}.";
     @return null;
@@ -51,8 +53,8 @@
     '4xl': $spacing-4xl
   );
   
-  @if map-has-key($spacings, $spacing-name) {
-    @return map-get($spacings, $spacing-name);
+  @if map.has-key($spacings, $spacing-name) {
+    @return map.get($spacings, $spacing-name);
   } @else {
     @warn "Unknown spacing: #{$spacing-name}.";
     @return null;
@@ -72,8 +74,8 @@
     '4xl': $font-size-4xl
   );
   
-  @if map-has-key($font-sizes, $size-name) {
-    @return map-get($font-sizes, $size-name);
+  @if map.has-key($font-sizes, $size-name) {
+    @return map.get($font-sizes, $size-name);
   } @else {
     @warn "Unknown font size: #{$size-name}.";
     @return null;
@@ -91,8 +93,8 @@
     'full': $border-radius-full
   );
   
-  @if map-has-key($border-radiuses, $radius-name) {
-    @return map-get($border-radiuses, $radius-name);
+  @if map.has-key($border-radiuses, $radius-name) {
+    @return map.get($border-radiuses, $radius-name);
   } @else {
     @warn "Unknown border radius: #{$radius-name}.";
     @return null;

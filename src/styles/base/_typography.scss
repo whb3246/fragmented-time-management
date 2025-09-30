@@ -1,4 +1,6 @@
 // 字体样式定义
+@use 'variables' as *;
+
 .text {
   // 字体大小
   &--xs { font-size: $font-size-xs; }

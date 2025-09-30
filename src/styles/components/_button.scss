@@ -1,4 +1,8 @@
 // 按钮组件样式
+@use 'sass:color';
+@use '../base/variables' as *;
+@use '../utils/mixins' as *;
+
 .btn {
   @include button-reset;
   @include flex-center;
@@ -102,7 +106,7 @@
     color: $white;
     
     &:hover:not(:disabled) {
-      background-color: darken($danger-color, 10%);
+      background-color: color.scale($danger-color, $lightness: -10%);
       transform: translateY(-1px);
       box-shadow: $shadow-md;
     }

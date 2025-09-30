@@ -416,8 +416,8 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/utils/mixins';
-@import '@/styles/base/variables';
+@use '@/styles/utils/mixins' as *;
+@use '@/styles/base/variables' as *;
 
 .history {
   min-height: 100vh;

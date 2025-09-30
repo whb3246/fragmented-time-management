@@ -171,8 +171,8 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/base/variables';
-@import '@/styles/utils/mixins';
+@use '@/styles/base/variables' as *;
+@use '@/styles/utils/mixins' as *;
 
 .user-nav {
   position: relative;

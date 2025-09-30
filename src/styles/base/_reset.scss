@@ -1,4 +1,6 @@
 // CSS 重置样式
+@use 'variables' as *;
+
 *,
 *::before,
 *::after {

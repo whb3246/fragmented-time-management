@@ -280,7 +280,7 @@ const handleCancel = () => {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/utils/mixins';
+@use '@/styles/utils/mixins' as *;
 
 .login-page {
   min-height: 100vh;

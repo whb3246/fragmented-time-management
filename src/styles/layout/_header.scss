@@ -1,4 +1,7 @@
 // 头部布局样式
+@use '../base/variables' as *;
+@use '../utils/mixins' as *;
+
 .header {
   position: sticky;
   top: 0;

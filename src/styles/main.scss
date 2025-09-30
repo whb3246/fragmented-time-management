@@ -1,22 +1,22 @@
 // 主样式文件 - 导入所有样式模块
 
 // 基础样式
-@import 'base/variables';
-@import 'base/reset';
-@import 'base/typography';
+@use 'base/variables' as *;
+@use 'base/reset';
+@use 'base/typography';
 
 // 工具函数和混合器
-@import 'utils/functions';
-@import 'utils/mixins';
+@use 'utils/functions';
+@use 'utils/mixins';
 
 // 布局样式
-@import 'layout/header';
-@import 'layout/grid';
+@use 'layout/header';
+@use 'layout/grid';
 
 // 组件样式
-@import 'components/button';
-@import 'components/card';
-@import 'components/timer';
+@use 'components/button';
+@use 'components/card';
+@use 'components/timer';
 
 // 页面样式（将在后续步骤中创建）
 // @import 'pages/home';

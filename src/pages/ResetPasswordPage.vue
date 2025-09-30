@@ -166,8 +166,8 @@ const handleResetPassword = async (): Promise<void> => {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/base/variables';
-@import '@/styles/utils/mixins';
+@use '@/styles/base/variables' as *;
+@use '@/styles/utils/mixins' as *;
 
 .reset-password-page {
   min-height: 100vh;
