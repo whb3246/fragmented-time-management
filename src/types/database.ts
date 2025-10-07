@@ -30,4 +30,19 @@ export interface TaskRecord {
   completed_at?: string
   created_at: string
   updated_at: string
+  // 积分相关字段
+  points_earned?: number
+}
+
+/**
+ * 用户积分统计类型
+ */
+export interface UserPointsStats {
+  id: string
+  user_id: string
+  total_points: number
+  points_this_week: number
+  points_this_month: number
+  last_updated_at: string
+  created_at: string
 }

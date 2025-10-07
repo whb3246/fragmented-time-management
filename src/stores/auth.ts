@@ -157,16 +157,18 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * 用户登出
-   * 如果是游客模式，清除本地存储的所有数据
+   * 清除本地存储的所有数据，无论是游客模式还是普通用户
    */
   const signOut = async () => {
     try {
       loading.value = true
       error.value = null
 
-      // 如果是游客模式，清除本地数据
+      // 导入 LocalStorageService 用于清除本地数据
+      const { LocalStorageService } = await import('@/services/localStorageService')
+
+      // 如果是游客模式，直接清除本地数据
       if (isGuestMode.value) {
-        const { LocalStorageService } = await import('@/services/localStorageService')
         LocalStorageService.clearGuestData()
         console.log('游客模式退出，已清除本地数据')
         
@@ -181,6 +183,10 @@ export const useAuthStore = defineStore('auth', () => {
       if (signOutError) {
         throw signOutError
       }
+
+      // 普通用户退出登录时也清除本地存储数据
+      LocalStorageService.clearGuestData()
+      console.log('普通用户退出登录，已清除本地数据')
 
       user.value = null
       isGuestMode.value = false

@@ -6,6 +6,8 @@
 import { supabase } from '@/lib/supabase'
 import LocalStorageService, { type TaskRecord, type UserPreference } from './localStorageService'
 import { useAuthStore } from '@/stores/auth'
+import type { UserPointsStats } from '@/types/database'
+import { PointsService } from './pointsService'
 
 /**
  * 数据存储适配器接口
@@ -28,6 +30,9 @@ export interface DataAdapter {
     totalTime: number
     averageTime: number
   }>
+
+  // 积分相关
+  getUserPointsStats(): Promise<UserPointsStats | null>
 }
 
 /**
@@ -61,6 +66,11 @@ class LocalStorageAdapter implements DataAdapter {
   async getTaskStats() {
     return LocalStorageService.getTaskStats()
   }
+
+  // 游客模式不支持积分
+  async getUserPointsStats(): Promise<UserPointsStats | null> {
+    return null
+  }
 }
 
 /**
@@ -84,6 +94,7 @@ class SupabaseAdapter implements DataAdapter {
         started_at,
         completed_at,
         created_at,
+        points_earned,
         tasks (
           title,
           description
@@ -107,7 +118,8 @@ class SupabaseAdapter implements DataAdapter {
       status: record.status,
       started_at: record.started_at,
       completed_at: record.completed_at,
-      created_at: record.created_at
+      created_at: record.created_at,
+      points_earned: record.points_earned
     }))
   }
 
@@ -116,6 +128,11 @@ class SupabaseAdapter implements DataAdapter {
     if (!authStore.userId) {
       throw new Error('用户未登录')
     }
+
+    // 计算积分（如果任务已完成）
+    const pointsEarned = record.status === 'completed' && record.actual_duration 
+      ? PointsService.calculatePoints(record.actual_duration)
+      : 0
 
     const { data, error } = await supabase
       .from('task_records')
@@ -126,7 +143,8 @@ class SupabaseAdapter implements DataAdapter {
         actual_duration: record.actual_duration,
         status: record.status,
         started_at: record.started_at,
-        completed_at: record.completed_at
+        completed_at: record.completed_at,
+        points_earned: pointsEarned
       })
       .select()
       .single()
@@ -145,18 +163,30 @@ class SupabaseAdapter implements DataAdapter {
       status: data.status,
       started_at: data.started_at,
       completed_at: data.completed_at,
-      created_at: data.created_at
+      created_at: data.created_at,
+      points_earned: data.points_earned
     }
   }
 
   async updateTaskRecord(id: string, updates: Partial<TaskRecord>): Promise<TaskRecord | null> {
+    // 计算积分（如果任务已完成）
+    const pointsEarned = updates.status === 'completed' && updates.actual_duration 
+      ? PointsService.calculatePoints(updates.actual_duration)
+      : undefined
+
+    const updateData: any = {
+      actual_duration: updates.actual_duration,
+      status: updates.status,
+      completed_at: updates.completed_at
+    }
+
+    if (pointsEarned !== undefined) {
+      updateData.points_earned = pointsEarned
+    }
+
     const { data, error } = await supabase
       .from('task_records')
-      .update({
-        actual_duration: updates.actual_duration,
-        status: updates.status,
-        completed_at: updates.completed_at
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
@@ -179,7 +209,8 @@ class SupabaseAdapter implements DataAdapter {
       status: data.status,
       started_at: data.started_at,
       completed_at: data.completed_at,
-      created_at: data.created_at
+      created_at: data.created_at,
+      points_earned: data.points_earned
     }
   }
 
@@ -283,7 +314,7 @@ class SupabaseAdapter implements DataAdapter {
 
     const { data, error } = await supabase
       .from('task_records')
-      .select('status, actual_duration')
+      .select('status, actual_duration, points_earned')
       .eq('user_id', authStore.userId)
 
     if (error) {
@@ -300,6 +331,10 @@ class SupabaseAdapter implements DataAdapter {
       totalTime,
       averageTime: completedRecords.length > 0 ? Math.round(totalTime / completedRecords.length) : 0
     }
+  }
+
+  async getUserPointsStats(): Promise<UserPointsStats | null> {
+    return PointsService.getUserStats()
   }
 }
 
@@ -331,7 +366,18 @@ export class DataService {
    */
   static async addTaskRecord(record: Omit<TaskRecord, 'id' | 'created_at'>): Promise<TaskRecord> {
     const adapter = this.getCurrentAdapter()
-    return adapter.addTaskRecord(record)
+    const result = await adapter.addTaskRecord(record)
+    
+    // 如果是注册用户且任务已完成，更新积分统计
+    if (!useAuthStore().isGuestMode && record.status === 'completed') {
+      try {
+        await PointsService.updateStats()
+      } catch (error) {
+        console.warn('更新积分统计失败:', error)
+      }
+    }
+    
+    return result
   }
 
   /**
@@ -339,7 +385,18 @@ export class DataService {
    */
   static async updateTaskRecord(id: string, updates: Partial<TaskRecord>): Promise<TaskRecord | null> {
     const adapter = this.getCurrentAdapter()
-    return adapter.updateTaskRecord(id, updates)
+    const result = await adapter.updateTaskRecord(id, updates)
+    
+    // 如果是注册用户且任务状态变为已完成，更新积分统计
+    if (!useAuthStore().isGuestMode && updates.status === 'completed') {
+      try {
+        await PointsService.updateStats()
+      } catch (error) {
+        console.warn('更新积分统计失败:', error)
+      }
+    }
+    
+    return result
   }
 
   /**
@@ -347,7 +404,18 @@ export class DataService {
    */
   static async deleteTaskRecord(id: string): Promise<boolean> {
     const adapter = this.getCurrentAdapter()
-    return adapter.deleteTaskRecord(id)
+    const result = await adapter.deleteTaskRecord(id)
+    
+    // 如果是注册用户，更新积分统计
+    if (!useAuthStore().isGuestMode && result) {
+      try {
+        await PointsService.updateStats()
+      } catch (error) {
+        console.warn('更新积分统计失败:', error)
+      }
+    }
+    
+    return result
   }
 
   /**
@@ -372,6 +440,14 @@ export class DataService {
   static async getTaskStats() {
     const adapter = this.getCurrentAdapter()
     return adapter.getTaskStats()
+  }
+
+  /**
+   * 获取用户积分统计
+   */
+  static async getUserPointsStats(): Promise<UserPointsStats | null> {
+    const adapter = this.getCurrentAdapter()
+    return adapter.getUserPointsStats()
   }
 }
 

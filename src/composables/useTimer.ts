@@ -13,7 +13,87 @@ export function useTimer(initialDuration: number = 0) {
   const startTime = ref<Date | null>(null) // 开始时间
   const pausedTime = ref(0) // 暂停的总时长
   
+  // 音频相关状态
+  const enableSound = ref(true) // 是否启用声音
+  const volume = ref(0.2) // 音量大小 (0-1)，降低默认音量
+  
   let intervalId: number | null = null
+  let audioContext: AudioContext | null = null
+
+  /**
+   * 创建Web Audio API上下文
+   */
+  const createAudioContext = (): AudioContext | null => {
+    try {
+      return new (window.AudioContext || (window as any).webkitAudioContext)()
+    } catch (error) {
+      console.warn('Web Audio API not supported:', error)
+      return null
+    }
+  }
+
+  /**
+   * 生成滴答声音效果
+   * 使用更舒适的音频参数，模拟真实时钟的滴答声
+   */
+  const playTickSound = (): void => {
+    if (!enableSound.value || volume.value === 0) return
+
+    if (!audioContext) {
+      audioContext = createAudioContext()
+    }
+
+    if (!audioContext) return
+
+    try {
+      // 创建两个振荡器产生更自然的滴答声（双音调效果）
+      const oscillator1 = audioContext.createOscillator()
+      const oscillator2 = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      const filterNode = audioContext.createBiquadFilter()
+
+      // 连接音频节点
+      oscillator1.connect(gainNode)
+      oscillator2.connect(gainNode)
+      gainNode.connect(filterNode)
+      filterNode.connect(audioContext.destination)
+
+      // 设置更舒适的滴答声参数
+      // 主音调：使用更温和的500Hz频率
+      oscillator1.frequency.setValueAtTime(500, audioContext.currentTime)
+      oscillator1.type = 'triangle' // 三角波更柔和
+      
+      // 辅助音调：添加轻微的高频成分增加清脆感
+      oscillator2.frequency.setValueAtTime(800, audioContext.currentTime)
+      oscillator2.type = 'sine'
+
+      // 添加低通滤波器，去除刺耳的高频
+      filterNode.type = 'lowpass'
+      filterNode.frequency.setValueAtTime(1200, audioContext.currentTime)
+      filterNode.Q.setValueAtTime(1, audioContext.currentTime)
+
+      // 设置更柔和的音量包络
+      const currentTime = audioContext.currentTime
+      const peakVolume = volume.value * 0.25 // 降低默认音量
+      const attackTime = 0.005 // 更快的起音
+      const decayTime = 0.06 // 更短的衰减时间
+
+      gainNode.gain.setValueAtTime(0, currentTime)
+      // 快速上升到峰值
+      gainNode.gain.linearRampToValueAtTime(peakVolume, currentTime + attackTime)
+      // 平滑衰减
+      gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + decayTime)
+
+      // 播放声音（更短的持续时间）
+      oscillator1.start(currentTime)
+      oscillator1.stop(currentTime + decayTime)
+      
+      oscillator2.start(currentTime)
+      oscillator2.stop(currentTime + decayTime)
+    } catch (error) {
+      console.warn('Failed to play tick sound:', error)
+    }
+  }
 
   /**
    * 计算进度百分比
@@ -83,6 +163,8 @@ export function useTimer(initialDuration: number = 0) {
     intervalId = window.setInterval(() => {
       if (remainingTime.value > 0) {
         remainingTime.value--
+        // 播放滴答声
+        playTickSound()
       } else {
         // 计时器完成
         stop()
@@ -175,6 +257,20 @@ export function useTimer(initialDuration: number = 0) {
   }
 
   /**
+   * 切换声音开关
+   */
+  const toggleSound = (): void => {
+    enableSound.value = !enableSound.value
+  }
+
+  /**
+   * 设置音量
+   */
+  const setVolume = (newVolume: number): void => {
+    volume.value = Math.max(0, Math.min(1, newVolume)) // 确保音量在0-1范围内
+  }
+
+  /**
    * 获取实际运行时间（排除暂停时间）
    */
   const getActualRunTime = (): number => {
@@ -198,7 +294,9 @@ export function useTimer(initialDuration: number = 0) {
       isPaused: isPaused.value,
       isCompleted: isCompleted.value,
       startTime: startTime.value,
-      actualRunTime: getActualRunTime()
+      actualRunTime: getActualRunTime(),
+      enableSound: enableSound.value,
+      volume: volume.value
     }
   }
 
@@ -211,10 +309,19 @@ export function useTimer(initialDuration: number = 0) {
     isRunning: boolean
     isPaused: boolean
     startTime: string | null
+    enableSound?: boolean
+    volume?: number
   }): void => {
     totalDuration.value = state.totalDuration
     remainingTime.value = state.remainingTime
     startTime.value = state.startTime ? new Date(state.startTime) : null
+    
+    if (state.enableSound !== undefined) {
+      enableSound.value = state.enableSound
+    }
+    if (state.volume !== undefined) {
+      volume.value = state.volume
+    }
     
     if (state.isRunning) {
       start()
@@ -224,11 +331,15 @@ export function useTimer(initialDuration: number = 0) {
   }
 
   /**
-   * 组件卸载时清理定时器
+   * 组件卸载时清理定时器和音频资源
    */
   onUnmounted(() => {
     if (intervalId) {
       clearInterval(intervalId)
+    }
+    if (audioContext) {
+      audioContext.close()
+      audioContext = null
     }
   })
 
@@ -242,6 +353,10 @@ export function useTimer(initialDuration: number = 0) {
     isPaused: readonly(isPaused),
     isCompleted,
     startTime: readonly(startTime),
+    
+    // 音频状态
+    enableSound: readonly(enableSound),
+    volume: readonly(volume),
     
     // 格式化时间
     formattedRemainingTime,
@@ -258,6 +373,10 @@ export function useTimer(initialDuration: number = 0) {
     setDuration,
     addTime,
     subtractTime,
+    
+    // 音频控制方法
+    toggleSound,
+    setVolume,
     
     // 工具方法
     getActualRunTime,
@@ -277,46 +396,48 @@ export function usePomodoroTimer(workDuration: number = 25 * 60, breakDuration: 
   const currentMode = ref<'work' | 'break'>('work')
   const completedPomodoros = ref(0)
   const isLongBreak = ref(false)
-  
+
   /**
    * 获取当前活动的计时器
    */
-  const currentTimer = computed(() => {
+  const getCurrentTimer = () => {
     return currentMode.value === 'work' ? workTimer : breakTimer
-  })
-
-  /**
-   * 开始工作时间
-   */
-  const startWork = (): void => {
-    currentMode.value = 'work'
-    breakTimer.stop()
-    workTimer.start()
   }
 
   /**
-   * 开始休息时间
+   * 切换到下一个阶段
    */
-  const startBreak = (isLong: boolean = false): void => {
-    currentMode.value = 'break'
-    isLongBreak.value = isLong
-    workTimer.stop()
-    
-    // 设置休息时长（长休息通常是15-30分钟）
-    const duration = isLong ? 15 * 60 : breakDuration
-    breakTimer.setDuration(duration)
-    breakTimer.start()
+  const switchToNextPhase = (): void => {
+    if (currentMode.value === 'work') {
+      completedPomodoros.value++
+      
+      // 每4个番茄钟后进行长休息
+      if (completedPomodoros.value % 4 === 0) {
+        isLongBreak.value = true
+        breakTimer.setDuration(15 * 60) // 15分钟长休息
+      } else {
+        isLongBreak.value = false
+        breakTimer.setDuration(breakDuration) // 5分钟短休息
+      }
+      
+      currentMode.value = 'break'
+      breakTimer.reset()
+    } else {
+      currentMode.value = 'work'
+      workTimer.reset()
+    }
   }
 
   /**
-   * 完成一个番茄钟
+   * 跳过当前阶段
    */
-  const completePomodoro = (): void => {
-    completedPomodoros.value++
-    
-    // 每4个番茄钟后进行长休息
-    const shouldLongBreak = completedPomodoros.value % 4 === 0
-    startBreak(shouldLongBreak)
+  const skipCurrent = (): void => {
+    if (currentMode.value === 'work') {
+      workTimer.stop()
+    } else {
+      breakTimer.stop()
+    }
+    switchToNextPhase()
   }
 
   /**
@@ -330,33 +451,20 @@ export function usePomodoroTimer(workDuration: number = 25 * 60, breakDuration: 
     isLongBreak.value = false
   }
 
-  /**
-   * 跳过当前阶段
-   */
-  const skipCurrent = (): void => {
-    if (currentMode.value === 'work') {
-      completePomodoro()
-    } else {
-      startWork()
-    }
-  }
-
   return {
     // 计时器实例
     workTimer,
     breakTimer,
-    currentTimer,
     
-    // 状态
+    // 番茄钟状态
     currentMode: readonly(currentMode),
     completedPomodoros: readonly(completedPomodoros),
     isLongBreak: readonly(isLongBreak),
     
-    // 控制方法
-    startWork,
-    startBreak,
-    completePomodoro,
-    resetPomodoro,
-    skipCurrent
+    // 方法
+    getCurrentTimer,
+    switchToNextPhase,
+    skipCurrent,
+    resetPomodoro
   }
 }

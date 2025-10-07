@@ -2,15 +2,6 @@
   <div class="task-detail">
     <!-- 页面头部 -->
     <header class="task-detail__header">
-      <button 
-        class="task-detail__back-btn"
-        @click="goBack"
-        aria-label="返回"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m15 18-6-6 6-6"/>
-        </svg>
-      </button>
       <h1 class="task-detail__title">任务详情</h1>
     </header>
 
@@ -246,12 +237,7 @@ const startTask = (): void => {
   })
 }
 
-/**
- * 返回上一页
- */
-const goBack = (): void => {
-  router.back()
-}
+
 
 // 生命周期
 onMounted(() => {
@@ -265,7 +251,12 @@ onMounted(() => {
 
 .task-detail {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  // 优化整体背景，与导航栏协调
+  background: linear-gradient(180deg, 
+    rgba(248, 250, 252, 0.3) 0%, 
+    rgba(255, 255, 255, 0.95) 15%, 
+    rgba(248, 250, 252, 0.2) 100%
+  );
   padding: 1rem;
 
   @include respond-to(tablet) {
@@ -273,28 +264,49 @@ onMounted(() => {
   }
 
   &__header {
+    // 添加毛玻璃效果，与导航栏保持一致
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 50%,
+      rgba(241, 245, 249, 0.95) 100%
+    );
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 6rem 2rem 2rem; // 增加顶部padding，避免与导航栏重叠
     display: flex;
     align-items: center;
     gap: 1rem;
     margin-bottom: 2rem;
-    color: white;
+    border: 1px solid rgba(226, 232, 240, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   }
 
   &__back-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.3);
     border-radius: 50%;
     width: 40px;
     height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #1e293b;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 1) 0%, 
+        rgba(248, 250, 252, 0.95) 100%
+      );
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
     }
   }
 
@@ -302,6 +314,7 @@ onMounted(() => {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
+    color: #1e293b;
   }
 
   &__loading,
@@ -311,7 +324,7 @@ onMounted(() => {
     align-items: center;
     justify-content: center;
     min-height: 200px;
-    color: white;
+    color: #1e293b;
     text-align: center;
   }
 
@@ -327,12 +340,16 @@ onMounted(() => {
 }
 
 .task-card {
-  background: white;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.98) 0%, 
+    rgba(248, 250, 252, 0.9) 100%
+  );
+  backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.3);
   &__header {
     display: flex;
     justify-content: space-between;
@@ -456,16 +473,22 @@ onMounted(() => {
 }
 
 .time-selector {
-  background: white;
+  // 统一时间选择器样式，与其他页面保持一致
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.98) 0%, 
+    rgba(248, 250, 252, 0.9) 100%
+  );
+  backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.3);
 
   &__title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #1f2937;
+    color: #1e293b;
     margin: 0 0 1rem 0;
   }
 
@@ -477,23 +500,39 @@ onMounted(() => {
   }
 
   &__option {
-    background: #f3f4f6;
-    border: 2px solid transparent;
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    color: #374151;
+    background: linear-gradient(135deg, 
+      rgba(248, 250, 252, 0.8) 0%, 
+      rgba(241, 245, 249, 0.9) 100%
+    );
+    border: 2px solid rgba(226, 232, 240, 0.6);
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    color: #64748b;
     cursor: pointer;
     transition: all 0.2s;
     font-size: 0.875rem;
+    font-weight: 500;
+    backdrop-filter: blur(5px);
 
     &:hover {
-      background: #e5e7eb;
+      background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.95) 0%, 
+        rgba(248, 250, 252, 0.9) 100%
+      );
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     &--active {
-      background: #3b82f6;
-      color: white;
-      border-color: #3b82f6;
+      background: linear-gradient(135deg, 
+        rgba(99, 102, 241, 0.1) 0%, 
+        rgba(139, 92, 246, 0.05) 100%
+      );
+      border-color: rgba(99, 102, 241, 0.6);
+      color: #4f46e5;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
     }
   }
 
@@ -505,22 +544,28 @@ onMounted(() => {
   }
 
   &__label {
-    color: #374151;
+    color: #64748b;
     font-size: 0.875rem;
     font-weight: 500;
   }
 
   &__input {
-    border: 2px solid #d1d5db;
-    border-radius: 8px;
     padding: 0.5rem 0.75rem;
+    border: 2px solid rgba(226, 232, 240, 0.6);
+    border-radius: 8px;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
+    color: #1e293b;
     font-size: 0.875rem;
-    width: 80px;
-    transition: border-color 0.2s;
+    width: 100px;
+    transition: all 0.2s;
 
     &:focus {
       outline: none;
-      border-color: #3b82f6;
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
   }
 }

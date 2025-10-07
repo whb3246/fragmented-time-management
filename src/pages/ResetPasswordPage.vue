@@ -171,7 +171,12 @@ const handleResetPassword = async (): Promise<void> => {
 
 .reset-password-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  // 优化整体背景，与导航栏协调
+  background: linear-gradient(180deg, 
+    rgba(248, 250, 252, 0.3) 0%, 
+    rgba(255, 255, 255, 0.95) 15%, 
+    rgba(248, 250, 252, 0.2) 100%
+  );
   @include flex-center;
   padding: 2rem 1rem;
 
@@ -181,7 +186,24 @@ const handleResetPassword = async (): Promise<void> => {
   }
 
   &__card {
-    background: rgba(255, 255, 255, 0.95);
+    // 添加毛玻璃效果，与导航栏保持一致
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.98) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(226, 232, 240, 0.3);
+
+    @include mobile {
+      padding: 1.5rem;
+      border-radius: 12px;
+    }
+  }
+  background: rgba(255, 255, 255, 0.95);
     border-radius: 16px;
     padding: 2rem;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);

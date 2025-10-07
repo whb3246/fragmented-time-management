@@ -1,18 +1,32 @@
 <template>
   <div class="timer-page">
     <div class="container">
-      <!-- 返回按钮 -->
-      <button class="timer-page__back-btn" @click="goBack">
-        <ArrowLeft class="timer-page__back-icon" />
-        返回
-      </button>
+
 
       <!-- 任务信息 -->
       <div class="timer-page__task-info" v-if="currentTask">
         <h1 class="timer-page__task-title">{{ currentTask.title }}</h1>
         <p class="timer-page__task-description">{{ currentTask.description }}</p>
+        
+        <!-- 积分显示区域 - 仅注册用户可见 -->
+        <div v-if="!authStore.isGuestMode && authStore.isAuthenticated" class="timer-points-display">
+          <div class="timer-points-display__item">
+            <svg class="timer-points-display__icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="timer-points-display__label">当前已获得积分</span>
+            <span class="timer-points-display__value">{{ currentEarnedPoints }}</span>
+          </div>
+          <div class="timer-points-display__item">
+            <svg class="timer-points-display__icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="timer-points-display__label">预期总积分</span>
+            <span class="timer-points-display__value">{{ Math.floor(totalDuration / 60) }}</span>
+          </div>
+        </div>
       </div>
-
+      
       <!-- 计时器主体 -->
       <div class="timer-container">
         <!-- 圆形进度条 -->
@@ -44,7 +58,7 @@
           
           <!-- 时间显示 -->
           <div class="timer-display">
-            <span class="timer-display__time">{{ formattedTime }}</span>
+            <span class="timer-display__time">{{ formattedRemainingTime }}</span>
             <span class="timer-display__status">{{ statusText }}</span>
           </div>
         </div>
@@ -54,7 +68,7 @@
           <button
             v-if="!isRunning && !isPaused"
             class="timer-controls__btn timer-controls__btn--start"
-            @click="startTimer"
+            @click="handleStart"
           >
             <Play class="timer-controls__icon" />
             开始
@@ -63,7 +77,7 @@
           <button
             v-if="isRunning"
             class="timer-controls__btn timer-controls__btn--pause"
-            @click="pauseTimer"
+            @click="pause"
           >
             <Pause class="timer-controls__icon" />
             暂停
@@ -72,7 +86,7 @@
           <button
             v-if="isPaused"
             class="timer-controls__btn timer-controls__btn--resume"
-            @click="resumeTimer"
+            @click="resume"
           >
             <Play class="timer-controls__icon" />
             继续
@@ -81,11 +95,34 @@
           <button
             v-if="isRunning || isPaused"
             class="timer-controls__btn timer-controls__btn--stop"
-            @click="stopTimer"
+            @click="handleStop"
           >
             <Square class="timer-controls__icon" />
             停止
           </button>
+        </div>
+
+        <!-- 音频控制 -->
+        <div class="timer-audio-controls">
+          <button
+            class="timer-audio-controls__btn"
+            @click="toggleSound"
+            :class="{ 'timer-audio-controls__btn--active': enableSound }"
+          >
+            {{ enableSound ? '🔊' : '🔇' }} 声音
+          </button>
+          <div class="timer-audio-controls__volume">
+            <label>音量:</label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              :value="volume"
+              @input="handleVolumeChange"
+              class="timer-audio-controls__slider"
+            />
+          </div>
         </div>
 
         <!-- 任务步骤 -->
@@ -111,7 +148,7 @@
             恭喜你完成了"{{ currentTask?.title }}"任务！
           </p>
           <p class="completion-dialog__time">
-            用时：{{ Math.floor(actualDuration / 60) }}分{{ actualDuration % 60 }}秒
+            用时：{{ formattedElapsedTime }}
           </p>
           <div class="completion-dialog__actions">
             <button
@@ -134,12 +171,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Play, Pause, Square } from 'lucide-vue-next'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import DataService from '@/services/dataService'
+import { useTimer } from '@/composables/useTimer'
+import { PointsService } from '@/services/pointsService'
 import type { Task } from '@/lib/supabase'
 
 /**
@@ -152,39 +191,54 @@ const authStore = useAuthStore()
 
 // 响应式数据
 const currentTask = ref<Task | null>(null)
-const totalDuration = ref(0) // 总时长（秒）
-const remainingTime = ref(0) // 剩余时间（秒）
-const actualDuration = ref(0) // 实际用时（秒）
-const isRunning = ref(false)
-const isPaused = ref(false)
 const showCompletionDialog = ref(false)
-const startTime = ref<Date | null>(null)
-const pausedTime = ref(0) // 暂停的总时长
 
-let timerInterval: number | null = null
+// 使用 useTimer 组合式函数
+const {
+  totalDuration,
+  remainingTime,
+  elapsedTime,
+  progress,
+  isRunning,
+  isPaused,
+  isCompleted,
+  startTime,
+  enableSound,
+  volume,
+  formattedRemainingTime,
+  formattedElapsedTime,
+  start,
+  pause,
+  resume,
+  stop,
+  reset,
+  setDuration,
+  toggleSound,
+  setVolume
+} = useTimer()
 
 // 计算属性
 const circumference = 2 * Math.PI * 90 // 圆周长
-const progress = computed(() => {
-  if (totalDuration.value === 0) return 0
-  return (totalDuration.value - remainingTime.value) / totalDuration.value
-})
 
 const strokeDashoffset = computed(() => {
-  return circumference * (1 - progress.value)
-})
-
-const formattedTime = computed(() => {
-  const minutes = Math.floor(remainingTime.value / 60)
-  const seconds = remainingTime.value % 60
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  return circumference * (1 - progress.value / 100)
 })
 
 const statusText = computed(() => {
   if (isRunning.value) return '专注中...'
   if (isPaused.value) return '已暂停'
-  if (remainingTime.value === 0) return '已完成'
+  if (isCompleted.value) return '已完成'
   return '准备开始'
+})
+
+/**
+ * 计算当前已获得积分
+ */
+const currentEarnedPoints = computed(() => {
+  if (authStore.isGuestMode || !authStore.isAuthenticated) {
+    return 0
+  }
+  return Math.floor(elapsedTime.value / 60) // 每分钟1积分
 })
 
 /**
@@ -208,8 +262,8 @@ const fetchTask = async () => {
     }
     
     currentTask.value = data
-    totalDuration.value = duration * 60 // 转换为秒
-    remainingTime.value = totalDuration.value
+    // 设置计时器时长
+    setDuration(duration * 60) // 转换为秒
   } catch (error) {
     console.error('获取任务出错:', error)
   }
@@ -218,81 +272,23 @@ const fetchTask = async () => {
 /**
  * 开始计时器
  */
-const startTimer = () => {
-  isRunning.value = true
-  isPaused.value = false
-  startTime.value = new Date()
-  
-  timerInterval = window.setInterval(() => {
-    if (remainingTime.value > 0) {
-      remainingTime.value--
-      actualDuration.value++
-    } else {
-      completeTimer()
-    }
-  }, 1000)
-}
-
-/**
- * 暂停计时器
- */
-const pauseTimer = () => {
-  isRunning.value = false
-  isPaused.value = true
-  
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
-}
-
-/**
- * 继续计时器
- */
-const resumeTimer = () => {
-  isRunning.value = true
-  isPaused.value = false
-  
-  timerInterval = window.setInterval(() => {
-    if (remainingTime.value > 0) {
-      remainingTime.value--
-      actualDuration.value++
-    } else {
-      completeTimer()
-    }
-  }, 1000)
+const handleStart = () => {
+  start()
 }
 
 /**
  * 停止计时器
  */
-const stopTimer = () => {
-  isRunning.value = false
-  isPaused.value = false
-  
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
-  
-  // 重置时间
-  remainingTime.value = totalDuration.value
-  actualDuration.value = 0
+const handleStop = () => {
+  stop()
 }
 
 /**
- * 完成计时器
+ * 处理音量变化
  */
-const completeTimer = () => {
-  isRunning.value = false
-  isPaused.value = false
-  
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
-  
-  showCompletionDialog.value = true
+const handleVolumeChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  setVolume(parseFloat(target.value))
 }
 
 /**
@@ -302,15 +298,25 @@ const saveTaskRecord = async () => {
   try {
     if (!currentTask.value) return
     
+    // 计算实际完成时间（分钟）
+    const actualDurationMinutes = Math.floor(elapsedTime.value / 60)
+    
+    // 为注册用户计算积分（每分钟1积分）
+    let pointsEarned = 0
+    if (!authStore.isGuestMode && authStore.isAuthenticated) {
+      pointsEarned = actualDurationMinutes
+    }
+    
     const taskRecord = {
       task_id: currentTask.value.id,
       task_title: currentTask.value.title,
       task_description: currentTask.value.description || '',
       planned_duration: Math.floor(totalDuration.value / 60), // 转换为分钟
-      actual_duration: Math.floor(actualDuration.value / 60), // 转换为分钟
+      actual_duration: actualDurationMinutes, // 转换为分钟
       status: 'completed' as const,
       started_at: startTime.value?.toISOString() || new Date().toISOString(),
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
+      points_earned: pointsEarned // 添加积分字段
     }
     
     // 使用 DataService 保存任务记录，自动适配游客模式和登录用户
@@ -322,12 +328,7 @@ const saveTaskRecord = async () => {
   }
 }
 
-/**
- * 返回上一页
- */
-const goBack = () => {
-  router.back()
-}
+
 
 /**
  * 返回首页
@@ -336,63 +337,105 @@ const goHome = () => {
   router.push({ name: 'home' })
 }
 
+// 监听计时器完成状态
+watch(isCompleted, (completed) => {
+  if (completed) {
+    showCompletionDialog.value = true
+  }
+})
+
 // 组件挂载时获取任务信息
 onMounted(() => {
   fetchTask()
 })
-
-// 组件卸载时清理定时器
-onUnmounted(() => {
-  if (timerInterval) {
-    clearInterval(timerInterval)
-  }
-})
 </script>
 
 <style lang="scss" scoped>
+@use '@/styles/utils/mixins' as *;
+
 .timer-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2rem 0;
-  
+  // 优化整体背景，与导航栏协调
+  background: linear-gradient(180deg, 
+    rgba(248, 250, 252, 0.3) 0%, 
+    rgba(255, 255, 255, 0.95) 15%, 
+    rgba(248, 250, 252, 0.2) 100%
+  );
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+
+  @include respond-to(tablet) {
+    padding: 2rem;
+  }
+
   &__back-btn {
+    position: fixed;
+    top: 6rem; // 调整位置，避免与导航栏重叠
+    left: 1rem;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.3);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: none;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
+    justify-content: center;
+    color: #1e293b;
     cursor: pointer;
-    margin-bottom: 2rem;
-    transition: background-color 0.2s;
-    
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    z-index: 10;
+
     &:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 1) 0%, 
+        rgba(248, 250, 252, 0.95) 100%
+      );
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    @include respond-to(tablet) {
+      left: 2rem;
     }
   }
-  
-  &__back-icon {
-    width: 1rem;
-    height: 1rem;
-  }
-  
+
   &__task-info {
+    // 添加毛玻璃效果，与导航栏保持一致
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 50%,
+      rgba(241, 245, 249, 0.95) 100%
+    );
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 6rem 2rem 2rem; // 增加顶部padding，避免与导航栏重叠
+    margin-bottom: 2rem;
     text-align: center;
-    margin-bottom: 3rem;
+    border: 1px solid rgba(226, 232, 240, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   }
-  
+
   &__task-title {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
+    color: #1e293b;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+
+    @include respond-to(tablet) {
+      font-size: 2rem;
+    }
   }
-  
+
   &__task-description {
-    font-size: 1.1rem;
-    opacity: 0.9;
+    color: #64748b;
+    font-size: 1rem;
+    margin: 0;
+    line-height: 1.5;
   }
 }
 
@@ -442,7 +485,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   
   &__btn {
     display: flex;
@@ -500,6 +543,77 @@ onUnmounted(() => {
   &__icon {
     width: 1.25rem;
     height: 1.25rem;
+  }
+}
+
+.timer-audio-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    &--active {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.2);
+    }
+  }
+  
+  &__volume {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+  }
+  
+  &__slider {
+    width: 100px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #10b981;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    &::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: #10b981;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+    }
   }
 }
 
@@ -628,6 +742,52 @@ onUnmounted(() => {
   
   .timer-controls__btn {
     width: 200px;
+  }
+  
+  .timer-audio-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+}
+
+.timer-points-display {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(245, 158, 11, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  
+  &__icon {
+    color: #F59E0B;
+    flex-shrink: 0;
+  }
+  
+  &__label {
+    font-size: 0.85rem;
+    color: #92400e;
+    font-weight: 500;
+  }
+  
+  &__value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #F59E0B;
+    min-width: 1.5rem;
+    text-align: center;
   }
 }
 </style>

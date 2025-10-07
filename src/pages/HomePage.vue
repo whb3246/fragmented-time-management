@@ -5,6 +5,24 @@
       <div class="container">
         <h1 class="home-page__title">碎片时间管理器</h1>
         <p class="home-page__subtitle">让每一分钟都有意义</p>
+        
+        <!-- 积分显示区域 - 仅注册用户可见 -->
+        <div v-if="!authStore.isGuestMode && authStore.isAuthenticated" class="points-display">
+          <div class="points-display__item">
+            <svg class="points-display__icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="points-display__label">总积分</span>
+            <span class="points-display__value">{{ userPointsStats?.total_points || 0 }}</span>
+          </div>
+          <div class="points-display__item">
+            <svg class="points-display__icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="points-display__label">本周积分</span>
+            <span class="points-display__value">{{ userPointsStats?.weekly_points || 0 }}</span>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -84,6 +102,13 @@
             <p class="task-card__description">{{ task.description }}</p>
             <div class="task-card__footer">
               <span class="task-card__difficulty">{{ getDifficultyText(task.difficulty) }}</span>
+              <!-- 积分显示 - 仅注册用户可见 -->
+              <div v-if="!authStore.isGuestMode && authStore.isAuthenticated" class="task-card__points">
+                <svg class="task-card__points-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span class="task-card__points-value">{{ task.duration }}积分</span>
+              </div>
               <button class="task-card__start-btn">开始任务</button>
             </div>
           </div>
@@ -125,19 +150,23 @@ import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
+import { PointsService } from '@/services/pointsService'
 import type { Task } from '@/lib/supabase'
+import type { UserPointsStats } from '@/types/database'
 
 /**
  * 首页组件 - 时间选择和任务推荐
  */
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 // 响应式数据
 const selectedTime = ref<number>(0)
 const customTime = ref<number>(15)
 const recommendedTasks = ref<Task[]>([])
 const loading = ref(false)
+const userPointsStats = ref<UserPointsStats | null>(null)
 
 // 预设时间选项
 const timeOptions = [
@@ -234,29 +263,97 @@ watch(selectedTime, (newTime) => {
 onMounted(() => {
   // 可以在这里添加初始化逻辑
 })
+
+/**
+ * 获取用户积分统计
+ */
+const getUserPointsStats = async () => {
+  if (authStore.isGuestMode || !authStore.isAuthenticated) {
+    return
+  }
+  
+  try {
+    const stats = await PointsService.getUserStats(authStore.userId!)
+    userPointsStats.value = stats
+  } catch (error) {
+    console.error('获取用户积分统计失败:', error)
+  }
+}
+
+// 组件挂载时的初始化
+onMounted(async () => {
+  // 获取用户积分统计
+  await getUserPointsStats()
+})
+
+// 监听认证状态变化
+watch(() => authStore.isAuthenticated, async (isAuthenticated) => {
+  if (isAuthenticated && !authStore.isGuestMode) {
+    await getUserPointsStats()
+  } else {
+    userPointsStats.value = null
+  }
+})
 </script>
 
 <style lang="scss" scoped>
 .home-page {
   min-height: 100vh;
+  // 优化整体背景，创造更自然的过渡
+  background: linear-gradient(180deg, 
+    rgba(248, 250, 252, 0.3) 0%, 
+    rgba(255, 255, 255, 0.95) 15%, 
+    rgba(248, 250, 252, 0.2) 100%
+  );
   
   &__header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 4rem 0 3rem;
+    // 移除强烈的渐变背景，使用柔和的半透明背景与导航栏协调
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 50%,
+      rgba(241, 245, 249, 0.95) 100%
+    );
+    // 添加毛玻璃效果，与导航栏保持一致
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #1e293b;
+    padding: 6rem 0 4rem; // 增加顶部padding，避免与导航栏重叠
     text-align: center;
+    // 添加柔和的底部过渡
+    position: relative;
+    // 添加微妙的边框
+    border-bottom: 1px solid rgba(226, 232, 240, 0.3);
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(180deg, 
+        rgba(255, 255, 255, 0) 0%, 
+        rgba(248, 250, 252, 0.5) 100%
+      );
+    }
   }
   
   &__title {
     font-size: 2.5rem;
-    font-weight: bold;
+    font-weight: 700;
     margin-bottom: 0.5rem;
+    // 调整文字颜色，使其更协调
+    color: #0f172a;
+    // 移除文字阴影，使用更清晰的显示
+    text-shadow: none;
   }
   
   &__subtitle {
     font-size: 1.2rem;
-    opacity: 0.9;
+    opacity: 0.7;
     margin-bottom: 2rem;
+    color: #475569;
+    text-shadow: none;
   }
   
   &__nav {
@@ -268,18 +365,36 @@ onMounted(() => {
   }
   
   &__time-selector {
-    padding: 3rem 0;
-    background-color: #f8fafc;
+    padding: 3rem 0 4rem; // 减少顶部padding，创造更自然的间距
+    // 使用更柔和的背景色，与整体渐变协调
+    background: linear-gradient(180deg, 
+      rgba(248, 250, 252, 0.3) 0%, 
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(248, 250, 252, 0.2) 100%
+    );
+    // 移除硬边界
+    border: none;
   }
   
   &__recommendations {
-    padding: 3rem 0;
+    padding: 3rem 0 4rem; // 调整间距
+    // 添加柔和的背景过渡
+    background: linear-gradient(180deg, 
+      rgba(255, 255, 255, 0.8) 0%, 
+      rgba(248, 250, 252, 0.2) 100%
+    );
   }
   
   &__quick-start {
-    padding: 2rem 0;
-    background-color: #f1f5f9;
+    padding: 3rem 0;
+    // 优化背景色，使用更柔和的渐变
+    background: linear-gradient(180deg, 
+      rgba(241, 245, 249, 0.3) 0%, 
+      rgba(248, 250, 252, 0.5) 100%
+    );
     text-align: center;
+    // 移除硬边界
+    border: none;
   }
 }
 
@@ -294,32 +409,48 @@ onMounted(() => {
     font-size: 1.8rem;
     margin-bottom: 2rem;
     color: #1e293b;
+    // 添加柔和的文字效果
+    font-weight: 600;
   }
   
   &__options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
+    gap: 1.5rem;
     margin-bottom: 2rem;
   }
   
   &__option {
     padding: 1.5rem 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    background: white;
+    // 使用更柔和的边框和背景
+    border: 2px solid rgba(226, 232, 240, 0.6);
+    border-radius: 16px;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.9) 0%, 
+      rgba(248, 250, 252, 0.8) 100%
+    );
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    // 添加柔和的阴影
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     
     &:hover {
-      border-color: #3b82f6;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.6);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.12);
+      background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 1) 0%, 
+        rgba(239, 246, 255, 0.9) 100%
+      );
     }
     
     &--active {
-      border-color: #3b82f6;
-      background-color: #eff6ff;
+      border-color: rgba(59, 130, 246, 0.8);
+      background: linear-gradient(135deg, 
+        rgba(239, 246, 255, 0.95) 0%, 
+        rgba(219, 234, 254, 0.8) 100%
+      );
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
     }
   }
   
@@ -337,7 +468,7 @@ onMounted(() => {
   }
   
   &__custom {
-    margin-top: 1rem;
+    margin-top: 1.5rem;
   }
   
   &__custom-label {
@@ -349,11 +480,19 @@ onMounted(() => {
   }
   
   &__custom-input {
-    padding: 0.5rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
+    padding: 0.75rem;
+    border: 1px solid rgba(209, 213, 219, 0.6);
+    border-radius: 8px;
     width: 80px;
     text-align: center;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.2s ease;
+    
+    &:focus {
+      outline: none;
+      border-color: rgba(59, 130, 246, 0.6);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
   }
 }
 
@@ -361,8 +500,9 @@ onMounted(() => {
   &__title {
     text-align: center;
     font-size: 1.8rem;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
     color: #1e293b;
+    font-weight: 600;
   }
   
   &__loading {
@@ -373,7 +513,7 @@ onMounted(() => {
   &__grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
+    gap: 2rem;
     max-width: 1200px;
     margin: 0 auto;
   }
@@ -386,16 +526,27 @@ onMounted(() => {
 }
 
 .task-card {
-  background: white;
-  border-radius: 12px;
+  // 优化卡片背景和阴影，与整体设计保持一致
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.98) 0%, 
+    rgba(248, 250, 252, 0.9) 100%
+  );
+  border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  // 添加柔和的边框
+  border: 1px solid rgba(226, 232, 240, 0.4);
   
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 1) 0%, 
+      rgba(239, 246, 255, 0.95) 100%
+    );
+    border-color: rgba(59, 130, 246, 0.3);
   }
   
   &__header {
@@ -417,18 +568,22 @@ onMounted(() => {
   }
   
   &__duration {
-    background-color: #eff6ff;
+    background: linear-gradient(135deg, 
+      rgba(239, 246, 255, 0.95) 0%, 
+      rgba(219, 234, 254, 0.9) 100%
+    );
     color: #3b82f6;
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 500;
     align-self: flex-start;
+    border: 1px solid rgba(59, 130, 246, 0.25);
   }
   
   &__description {
     color: #64748b;
-    line-height: 1.5;
+    line-height: 1.6;
     margin-bottom: 1rem;
   }
   
@@ -436,25 +591,51 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: 1rem;
   }
   
   &__difficulty {
-    font-size: 0.875rem;
-    color: #6b7280;
+    font-size: 0.9rem;
+    color: #64748b;
+    padding: 0.25rem 0.5rem;
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+  
+  &__points {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: 4px;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  
+  &__points-icon {
+    color: #F59E0B;
+    flex-shrink: 0;
+  }
+  
+  &__points-value {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #F59E0B;
   }
   
   &__start-btn {
-    background-color: #3b82f6;
+    background: var(--color-primary);
     color: white;
+    border: none;
     padding: 0.5rem 1rem;
     border-radius: 6px;
-    border: none;
-    cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.2s;
+    cursor: pointer;
+    transition: all 0.2s ease;
     
     &:hover {
-      background-color: #2563eb;
+      background: var(--color-primary-dark);
+      transform: translateY(-1px);
     }
   }
 }
@@ -474,16 +655,25 @@ onMounted(() => {
   
   &__link {
     padding: 0.75rem 1.5rem;
-    background-color: white;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
     color: #3b82f6;
     text-decoration: none;
     border-radius: 8px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid rgba(226, 232, 240, 0.5);
     transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
     
     &:hover {
-      background-color: #f9fafb;
-      border-color: #3b82f6;
+      background: linear-gradient(135deg, 
+        rgba(239, 246, 255, 0.95) 0%, 
+        rgba(219, 234, 254, 0.8) 100%
+      );
+      border-color: rgba(59, 130, 246, 0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
     }
   }
 }
@@ -509,6 +699,47 @@ onMounted(() => {
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.points-display {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  
+  &__icon {
+    color: #F59E0B;
+    flex-shrink: 0;
+  }
+  
+  &__label {
+    font-size: 0.9rem;
+    color: #92400e;
+    font-weight: 500;
+  }
+  
+  &__value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #F59E0B;
+    min-width: 2rem;
+    text-align: center;
+  }
 }
 
 // 响应式设计

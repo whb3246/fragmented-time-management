@@ -75,17 +75,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-/**
- * 返回上一页
- */
-const goBack = (): void => {
-  // 如果有历史记录则返回上一页，否则跳转到首页
-  if (window.history.length > 1) {
-    router.back()
-  } else {
-    router.push('/')
-  }
-}
+
 </script>
 
 <style lang="scss" scoped>
@@ -94,7 +84,12 @@ const goBack = (): void => {
 
 .not-found-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  // 优化整体背景，与导航栏协调
+  background: linear-gradient(180deg, 
+    rgba(248, 250, 252, 0.3) 0%, 
+    rgba(255, 255, 255, 0.95) 15%, 
+    rgba(248, 250, 252, 0.2) 100%
+  );
   @include flex-center;
   padding: 2rem 1rem;
 
@@ -104,11 +99,18 @@ const goBack = (): void => {
   }
 
   &__content {
-    background: rgba(255, 255, 255, 0.95);
+    // 添加毛玻璃效果，与导航栏保持一致
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.98) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 3rem 2rem;
     text-align: center;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(226, 232, 240, 0.3);
     backdrop-filter: blur(10px);
 
     @include mobile {

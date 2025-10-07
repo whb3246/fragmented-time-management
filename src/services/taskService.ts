@@ -385,9 +385,14 @@ export class TaskRecordService {
       const totalMinutes = completedTasks.reduce((sum, r) => sum + (r.actual_duration || 0), 0)
 
       // 计算平均完成率
-      const averageCompletion = records.length > 0 
-        ? Math.round((completedTasks.length / records.length) * 100)
-        : 0
+      // 确保避免除零操作和 NaN 值
+      let averageCompletion = 0
+      if (records.length > 0 && completedTasks.length >= 0) {
+        const completionRate = (completedTasks.length / records.length) * 100
+        averageCompletion = Math.round(completionRate)
+        // 确保结果在 0-100 范围内
+        averageCompletion = Math.max(0, Math.min(100, averageCompletion))
+      }
 
       // 计算今日任务数
       const today = new Date().toISOString().split('T')[0]
